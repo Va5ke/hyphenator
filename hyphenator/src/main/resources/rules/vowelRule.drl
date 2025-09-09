@@ -1,6 +1,0 @@
-rule "Vowel is a nucleus"
-when
-    $c : model.Letter(traits.type == model.PhonemeType.VOWEL)
-then
-    $c.setRole(model.LetterRole.NUCLEUS);
-end

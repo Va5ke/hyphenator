@@ -1,29 +1,23 @@
 import java.io.BufferedReader;
-import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.stream.Collectors;
 
-import org.apache.commons.codec.language.bm.Rule.Phoneme;
+import javax.swing.JPopupMenu.Separator;
+
 import org.drools.template.ObjectDataCompiler;
 import org.kie.api.KieServices;
 import org.kie.api.builder.KieBuilder;
 import org.kie.api.builder.KieFileSystem;
 import org.kie.api.builder.Message;
-import org.kie.api.event.rule.AfterMatchFiredEvent;
-import org.kie.api.event.rule.DefaultAgendaEventListener;
-import org.kie.api.event.rule.MatchCreatedEvent;
 import org.kie.api.runtime.KieContainer;
 import org.kie.api.runtime.KieSession;
 import org.kie.internal.io.ResourceFactory;
@@ -69,6 +63,10 @@ public class App {
 
         List<Map<String, Object>> sonorityData = new ArrayList<>();
         List<Map<String, Object>> typeData = new ArrayList<>();
+        List<Map<String, Object>> nucleusCandidateData = new ArrayList<>();
+        nucleusCandidateData.add(Map.of("symbol", 'л'));
+        nucleusCandidateData.add(Map.of("symbol", 'н'));
+        nucleusCandidateData.add(Map.of("symbol", 'р'));
 
         for (Map.Entry<Character, PhoneticTraits> entry : phonemes.entrySet()) {
             char symbol = entry.getKey();
@@ -93,14 +91,19 @@ public class App {
         InputStream typeTemplate = App.class.getResourceAsStream("/templates/typeTemplate.drt");
         String typeRules = compiler.compile(typeData, typeTemplate);
 
-        String combinedRules = sonorityRules + "\n\n" + typeRules;
+        InputStream nucleusCandidateTemplate = App.class.getResourceAsStream("/templates/nucleusCandidateTemplate.drt");
+        String nucleusCandidateRules = compiler.compile(nucleusCandidateData, nucleusCandidateTemplate);
+
+        String combinedRules = sonorityRules + "\n\n" + typeRules + "\n\n" + nucleusCandidateRules;
         
         KieServices ks = KieServices.Factory.get();
         KieFileSystem kfs = ks.newKieFileSystem();
 
         kfs.write("src/main/resources/rules/generatedRules.drl", combinedRules);
-        kfs.write("src/main/resources/rules/vowelRule.drl",
-          ResourceFactory.newClassPathResource("rules/vowelRule.drl"));
+        kfs.write("src/main/resources/rules/nucleusRules.drl",
+          ResourceFactory.newClassPathResource("rules/nucleusRules.drl"));
+        kfs.write("src/main/resources/rules/separatorRules.drl",
+          ResourceFactory.newClassPathResource("rules/separatorRules.drl"));
 
         KieBuilder kb = ks.newKieBuilder(kfs).buildAll();
         if (kb.getResults().hasMessages(Message.Level.ERROR)) {
@@ -110,7 +113,9 @@ public class App {
         KieContainer kContainer = ks.newKieContainer(kb.getKieModule().getReleaseId());
         KieSession kSession = kContainer.newKieSession();
 
-        String word = "обезвредити".toLowerCase();
+        String word = "разноврсност";
+        // String word = "шаптати";
+        // String word = "стално";
         for (int i=0; i<word.length(); i++) {
             Letter l = new Letter(i, word.charAt(i));
             kSession.insert(l);
@@ -124,9 +129,14 @@ public class App {
         .sorted(Comparator.comparingInt(Letter::getPosition))
         .collect(Collectors.toList());
 
-        for (Letter l: processedLetters) {
-            System.out.println(l);
-        }
+        processedLetters.forEach(System.out::println);
+
+        List<Separator> separators = kSession.getObjects().stream()
+            .filter(o -> o instanceof Separator)
+            .map(o -> (Separator) o)
+            .collect(Collectors.toList());
+
+        separators.forEach(System.out::println);
 
         kSession.dispose();
     }

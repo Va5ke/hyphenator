@@ -9,7 +9,7 @@ public class Letter {
     private LetterRole role = LetterRole.NONE;
 
     public Letter(int pos, char value) {
-        this.position = pos * 2;
+        this.position = pos;
         this.symbol = value;
     }
 
@@ -35,6 +35,6 @@ public class Letter {
 
     @Override
     public String toString() {
-        return "Letter(symbol: " + symbol + ", type: " + traits.getType() + ", sonority: " + traits.getSonority() + ", role: " + role + ")";
+        return "Letter(symbol: " + symbol + ", pos: " + position + ", type: " + traits.getType() + ", sonority: " + traits.getSonority() + ", role: " + role + ")";
     }
 }

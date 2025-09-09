@@ -1,0 +1,61 @@
+rule "Two sonants preceded by a nucleus are separated if the second one is not J preceded by E"
+salience 1
+when
+    $preceding : model.Letter(role == model.LetterRole.NUCLEUS, $pos : position)
+    exists(model.Letter(role == model.LetterRole.NUCLEUS, position > $pos))
+    
+    $left : model.Letter(
+        position == $pos + 1,
+        $left.getTraits().getType() == model.PhonemeType.NASAL ||
+        $left.getTraits().getType() == model.PhonemeType.OTHER
+    )
+    
+    $middle : model.Letter(
+        position == $pos + 2,
+        $middle.getRole() != model.LetterRole.NUCLEUS && (
+        $middle.getTraits().getType() == model.PhonemeType.NASAL ||
+        $middle.getTraits().getType() == model.PhonemeType.OTHER
+    ))
+
+    $right : model.Letter(position == $pos + 3)
+    eval($middle.getSymbol() != 'ј' || $right.getSymbol() != 'е')
+then
+    // insert(new model.Separator($pos + 1, $pos + 2));
+    $preceding.setRole(model.LetterRole.NONE);
+    update($preceding);
+    System.out.println("" + $preceding.getSymbol() + $left.getSymbol() + "|" + $middle.getSymbol());
+end
+
+rule "Two consonants preceded by a nucleus are separated if the first one is a nasal or plosive and the second one is not V, J, L, Lj, or R"
+salience 1
+when
+    $preceding : model.Letter(role == model.LetterRole.NUCLEUS, $pos : position)
+    exists(model.Letter(role == model.LetterRole.NUCLEUS, position > $pos))
+
+    $left : model.Letter(
+        position == $pos + 1,
+        $left.getTraits().getType() == model.PhonemeType.NASAL ||
+        $left.getTraits().getType() == model.PhonemeType.PLOSIVE
+    )
+
+    $right : model.Letter(
+        position == $pos + 2,
+        $right.getTraits().getType() != model.PhonemeType.OTHER &&
+        $right.getTraits().getType() != model.PhonemeType.VOWEL
+    )
+then
+    System.out.println("" + $preceding.getSymbol() + $left.getSymbol() + "|" + $right.getSymbol());
+    $preceding.setRole(model.LetterRole.NONE);
+    update($preceding);
+end
+
+rule "Default case for separating syllables"
+when
+    $preceding : model.Letter(role == model.LetterRole.NUCLEUS, $pos: position)
+    exists(model.Letter(role == model.LetterRole.NUCLEUS, position > $pos))
+    $next : model.Letter(position == $pos + 1)
+then
+    System.out.println("" + $preceding.getSymbol() + "|" + $next.getSymbol());
+    $preceding.setRole(model.LetterRole.NONE);
+    update($preceding);
+end
