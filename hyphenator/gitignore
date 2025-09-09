@@ -1,5 +1,5 @@
 # Maven build
-/target/
+**/target/**
 !.mvn/wrapper/maven-wrapper.jar
 
 # VS Code
