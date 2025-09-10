@@ -1,0 +1,8 @@
+rule "A separator cannot be between two vowels"
+when
+    $sep: model.Separator($pos: position)
+    $left: model.Letter(traits.getType() == model.PhonemeType.VOWEL, position == $pos)
+    $right: model.Letter(traits.getType() == model.PhonemeType.VOWEL, position == $pos + 1)
+then
+    $sep.invalidate();
+end

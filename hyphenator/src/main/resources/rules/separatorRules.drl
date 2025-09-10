@@ -1,0 +1,57 @@
+rule "Two sonants preceded by a nucleus are separated if the second one is not J preceded by E"
+salience 9
+when
+    $preceding : model.Letter(role == model.LetterRole.NUCLEUS, $pos : position)
+    $other : model.Letter(role == model.LetterRole.NUCLEUS, position > $pos)
+    
+    $left : model.Letter(position == $pos + 1)
+    eval($left.getTraits().getType() == model.PhonemeType.NASAL ||
+        $left.getTraits().getType() == model.PhonemeType.OTHER)
+    
+    $middle : model.Letter(position == $pos + 2)
+    eval($middle.getRole() != model.LetterRole.NUCLEUS && $middle.getRole() != model.LetterRole.PROCESSED)
+    eval($middle.getTraits().getType() == model.PhonemeType.NASAL ||
+        $middle.getTraits().getType() == model.PhonemeType.OTHER)
+
+    $right : model.Letter(position == $pos + 3)
+    eval($middle.getSymbol() != 'ј' || $right.getSymbol() != 'е')
+then
+    insert(new model.Separator($pos + 1));
+    $preceding.setRole(model.LetterRole.PROCESSED);
+    update($preceding);
+end
+
+rule "Two consonants preceded by a nucleus are separated if the first one is a nasal or plosive and the second one is not V, J, L, Lj, or R"
+salience 9
+when
+    $preceding : model.Letter(role == model.LetterRole.NUCLEUS, $pos : position)
+    $other : model.Letter(role == model.LetterRole.NUCLEUS, position > $pos)
+
+    $left : model.Letter(
+        position == $pos + 1
+    )
+    eval(
+        $left.getTraits().getType() == model.PhonemeType.NASAL ||
+        $left.getTraits().getType() == model.PhonemeType.PLOSIVE)
+
+    $right : model.Letter(position == $pos + 2)
+    eval($right.getTraits().getType() != model.PhonemeType.OTHER &&
+        $right.getTraits().getType() != model.PhonemeType.VOWEL)
+then
+    insert(new model.Separator($pos + 1));
+    $preceding.setRole(model.LetterRole.PROCESSED);
+    update($preceding);
+end
+
+rule "Default case for separating syllables"
+salience 8
+// TODO: does it matter if it's lower than the rest?
+when
+    $preceding : model.Letter(role == model.LetterRole.NUCLEUS, $pos: position)
+    $other : model.Letter(position > $pos)
+    eval($other.getRole() == model.LetterRole.NUCLEUS)
+then
+    insert(new model.Separator($pos));
+    $preceding.setRole(model.LetterRole.PROCESSED);
+    update($preceding);
+end

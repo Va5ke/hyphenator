@@ -1,0 +1,14 @@
+template header
+symbol
+sonority
+
+template "Determine letter sonority"
+
+rule "Measure @{symbol} sonority as @{sonority}"
+when
+    $c : model.Letter(symbol == "@{symbol}")
+then
+    $c.getTraits().setSonority(@{sonority});
+    update($c);
+end
+end template
