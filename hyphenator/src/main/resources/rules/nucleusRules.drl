@@ -7,6 +7,7 @@ then
 end
 
 rule "Nucleus candidate between two phonemes of lower sonority is a nucleus"
+salience 10
 when
     $middle : model.Letter(role == model.LetterRole.NUCLEUS_CANDIDATE, $mPos: position, $mSon : traits.sonority)
 
@@ -21,6 +22,7 @@ then
 end
 
 rule "Nucleus candidate at the start of the word followed by a phoneme of lower sonority is a nucleus"
+salience 10
 when
     $left : model.Letter(role == model.LetterRole.NUCLEUS_CANDIDATE, $lPos: position, $lSon : traits.sonority)
 
@@ -33,6 +35,7 @@ then
 end
 
 rule "Nucleus candidate at the end of the word preceded by a phoneme of lower sonority is a nucleus"
+salience 10
 when
     $right : model.Letter(role == model.LetterRole.NUCLEUS_CANDIDATE, $rPos: position, $rSon: traits.sonority)
 

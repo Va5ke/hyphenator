@@ -11,8 +11,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import javax.swing.JPopupMenu.Separator;
-
 import org.drools.template.ObjectDataCompiler;
 import org.kie.api.KieServices;
 import org.kie.api.builder.KieBuilder;
@@ -24,6 +22,7 @@ import org.kie.internal.io.ResourceFactory;
 
 import model.Letter;
 import model.PhoneticTraits;
+import model.Separator;
 import model.PhonemeType;
 
 public class App {
@@ -113,7 +112,7 @@ public class App {
         KieContainer kContainer = ks.newKieContainer(kb.getKieModule().getReleaseId());
         KieSession kSession = kContainer.newKieSession();
 
-        String word = "разноврсност";
+        String word = "деветнаестогодишњакиња";
         // String word = "шаптати";
         // String word = "стално";
         for (int i=0; i<word.length(); i++) {
@@ -124,19 +123,25 @@ public class App {
         kSession.fireAllRules();
 
         List<Letter> processedLetters = kSession.getObjects().stream()
-        .filter(o -> o instanceof Letter)
-        .map(o -> (Letter) o)
-        .sorted(Comparator.comparingInt(Letter::getPosition))
-        .collect(Collectors.toList());
-
-        processedLetters.forEach(System.out::println);
+            .filter(o -> o instanceof Letter)
+            .map(o -> (Letter) o)
+            .sorted(Comparator.comparingInt(Letter::getPosition))
+            .collect(Collectors.toList());
 
         List<Separator> separators = kSession.getObjects().stream()
             .filter(o -> o instanceof Separator)
             .map(o -> (Separator) o)
+            .sorted(Comparator.comparingInt(Separator::getPosition))
             .collect(Collectors.toList());
 
-        separators.forEach(System.out::println);
+        int separatorCounter = 0;
+        for (Letter l : processedLetters) {
+            System.out.print(l.getSymbol());
+            if (separatorCounter == separators.size() ||
+                separators.get(separatorCounter).getPosition() != l.getPosition()) continue;
+            System.out.print("|");
+            separatorCounter++;
+        }
 
         kSession.dispose();
     }
