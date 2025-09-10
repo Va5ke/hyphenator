@@ -103,6 +103,8 @@ public class App {
           ResourceFactory.newClassPathResource("rules/nucleusRules.drl"));
         kfs.write("src/main/resources/rules/separatorRules.drl",
           ResourceFactory.newClassPathResource("rules/separatorRules.drl"));
+        kfs.write("src/main/resources/rules/hyphenationRules.drl",
+          ResourceFactory.newClassPathResource("rules/hyphenationRules.drl"));
 
         KieBuilder kb = ks.newKieBuilder(kfs).buildAll();
         if (kb.getResults().hasMessages(Message.Level.ERROR)) {
@@ -139,7 +141,7 @@ public class App {
             System.out.print(l.getSymbol());
             if (separatorCounter == separators.size() ||
                 separators.get(separatorCounter).getPosition() != l.getPosition()) continue;
-            System.out.print("|");
+            System.out.print(separators.get(separatorCounter).isValid() ? "|" : ":");
             separatorCounter++;
         }
 
