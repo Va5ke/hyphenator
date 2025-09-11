@@ -2,7 +2,7 @@ template header
 symbol
 sonority
 
-template "Determine letter sonority"
+template "Determine letter phonetic traits"
 
 rule "Measure @{symbol} sonority as @{sonority}"
 when

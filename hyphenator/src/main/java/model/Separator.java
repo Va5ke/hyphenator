@@ -1,15 +1,10 @@
 package model;
 
-public class Separator {
-    private int position;
+public class Separator extends Token{
     public boolean valid = true;
 
     public Separator(int position) {
-        this.position = position;
-    }
-
-    public int getPosition() {
-        return position;
+        super(position);
     }
 
     public boolean isValid() {

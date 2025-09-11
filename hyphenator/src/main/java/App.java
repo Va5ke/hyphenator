@@ -23,6 +23,7 @@ import org.kie.internal.io.ResourceFactory;
 import model.Letter;
 import model.PhoneticTraits;
 import model.Separator;
+import model.Token;
 import model.PhonemeType;
 
 public class App {
@@ -55,56 +56,91 @@ public class App {
         }
         return phonemes;
     }
+
+    private static void fillPhonemeRows(Map<Character, PhoneticTraits> phonemes, List<Map<String, Object>> sonorityData,  List<Map<String, Object>> typeData) {
+        for (Map.Entry<Character, PhoneticTraits> entry : phonemes.entrySet()) {
+            sonorityData.add(Map.of(
+                "symbol", entry.getKey(),
+                "sonority", entry.getValue().getSonority()));
+            typeData.add(Map.of(
+                "symbol", entry.getKey(),
+                "type", entry.getValue().getType()));
+        }
+    }
+
+    private static List<Map<String, Object>> fillSeparatorRows(PhonemeType[] leftTypes, PhonemeType[] rightTypes) {
+        List<Map<String, Object>> separatorData = new ArrayList<>();
+        for (PhonemeType leftType : leftTypes) {
+            for (PhonemeType rightType : rightTypes) {
+                separatorData.add(Map.of(
+                    "leftType", leftType,
+                    "rightType", rightType
+                ));
+            }
+        }
+        return separatorData;
+    }
+
+    private static List<Map<String, Object>> fillSeparatorPlosiveNasalRows() {
+        PhonemeType[] leftTypes = {PhonemeType.PLOSIVE, PhonemeType.NASAL};
+        PhonemeType[] rightTypes = {PhonemeType.PLOSIVE, PhonemeType.AFFRICATE, PhonemeType.FRICATIVE, PhonemeType.NASAL};
+        return fillSeparatorRows(leftTypes, rightTypes);
+    }
+
+    private static List<Map<String, Object>> fillSeparatorSonantsRows() {
+        PhonemeType[] types = {PhonemeType.OTHER, PhonemeType.NASAL};
+        return fillSeparatorRows(types, types);
+    }
+
+    private static String generateRules(ObjectDataCompiler compiler, List<Map<String, Object>> data, String templateName) {
+        InputStream phonemeTemplate = App.class.getResourceAsStream("/templates/" + templateName + "Template.drt");
+        return compiler.compile(data, phonemeTemplate) + "\n\n";
+    }
+
+    private static void writeRules(KieFileSystem kfs, String rulesName) {
+        kfs.write("src/main/resources/rules/" + rulesName + "Rules.drl",
+          ResourceFactory.newClassPathResource("rules/" + rulesName + "Rules.drl"));
+    }
+
+    private static <T extends Token> List<T> extractObjects(KieSession kSession, Class<T> c) {
+    return kSession.getObjects().stream()
+        .filter(c::isInstance)
+        .map(c::cast)
+        .sorted(Comparator.comparingInt(Token::getPosition))
+        .collect(Collectors.toList());
+    }
     
     public static void main(String[] args) throws Exception {
 
         Map<Character, PhoneticTraits> phonemes = readPhonemes();
-
         List<Map<String, Object>> sonorityData = new ArrayList<>();
         List<Map<String, Object>> typeData = new ArrayList<>();
+        fillPhonemeRows(phonemes, sonorityData, typeData);
+
+        List<Map<String, Object>> separatorSonantsData = fillSeparatorSonantsRows();
+        List<Map<String, Object>> separatorPlosiveNasalData = fillSeparatorPlosiveNasalRows();
+
         List<Map<String, Object>> nucleusCandidateData = new ArrayList<>();
         nucleusCandidateData.add(Map.of("symbol", 'л'));
         nucleusCandidateData.add(Map.of("symbol", 'н'));
         nucleusCandidateData.add(Map.of("symbol", 'р'));
 
-        for (Map.Entry<Character, PhoneticTraits> entry : phonemes.entrySet()) {
-            char symbol = entry.getKey();
-            PhoneticTraits traits = entry.getValue();
-
-            Map<String, Object> sRow = new HashMap<>();
-            sRow.put("symbol", symbol);
-            sRow.put("sonority", traits.getSonority());
-            sonorityData.add(sRow);
-
-            Map<String, Object> tRow = new HashMap<>();
-            tRow.put("symbol", symbol);
-            tRow.put("type", traits.getType());
-            typeData.add(tRow);
-        }
-
         ObjectDataCompiler compiler = new ObjectDataCompiler();
-
-        InputStream sonorityTemplate = App.class.getResourceAsStream("/templates/sonorityTemplate.drt");
-        String sonorityRules = compiler.compile(sonorityData, sonorityTemplate);
-
-        InputStream typeTemplate = App.class.getResourceAsStream("/templates/typeTemplate.drt");
-        String typeRules = compiler.compile(typeData, typeTemplate);
-
-        InputStream nucleusCandidateTemplate = App.class.getResourceAsStream("/templates/nucleusCandidateTemplate.drt");
-        String nucleusCandidateRules = compiler.compile(nucleusCandidateData, nucleusCandidateTemplate);
-
-        String combinedRules = sonorityRules + "\n\n" + typeRules + "\n\n" + nucleusCandidateRules;
+        String combinedRules = "";
+        combinedRules += generateRules(compiler, sonorityData, "sonority");
+        combinedRules += generateRules(compiler, typeData, "type");
+        combinedRules += generateRules(compiler, separatorSonantsData, "separatorSonants");
+        combinedRules += generateRules(compiler, separatorPlosiveNasalData, "separatorPlosiveNasal");
+        combinedRules += generateRules(compiler, nucleusCandidateData, "nucleusCandidate");
         
         KieServices ks = KieServices.Factory.get();
         KieFileSystem kfs = ks.newKieFileSystem();
 
         kfs.write("src/main/resources/rules/generatedRules.drl", combinedRules);
-        kfs.write("src/main/resources/rules/nucleusRules.drl",
-          ResourceFactory.newClassPathResource("rules/nucleusRules.drl"));
-        kfs.write("src/main/resources/rules/separatorRules.drl",
-          ResourceFactory.newClassPathResource("rules/separatorRules.drl"));
-        kfs.write("src/main/resources/rules/hyphenationRules.drl",
-          ResourceFactory.newClassPathResource("rules/hyphenationRules.drl"));
+        
+        writeRules(kfs, "nucleus");
+        writeRules(kfs, "separator");
+        writeRules(kfs, "hyphenation");
 
         KieBuilder kb = ks.newKieBuilder(kfs).buildAll();
         if (kb.getResults().hasMessages(Message.Level.ERROR)) {
@@ -114,9 +150,7 @@ public class App {
         KieContainer kContainer = ks.newKieContainer(kb.getKieModule().getReleaseId());
         KieSession kSession = kContainer.newKieSession();
 
-        String word = "деветнаестогодишњакиња";
-        // String word = "шаптати";
-        // String word = "стално";
+        String word = "седамнаестогодишњакиња";
         for (int i=0; i<word.length(); i++) {
             Letter l = new Letter(i, word.charAt(i));
             kSession.insert(l);
@@ -124,17 +158,8 @@ public class App {
 
         kSession.fireAllRules();
 
-        List<Letter> processedLetters = kSession.getObjects().stream()
-            .filter(o -> o instanceof Letter)
-            .map(o -> (Letter) o)
-            .sorted(Comparator.comparingInt(Letter::getPosition))
-            .collect(Collectors.toList());
-
-        List<Separator> separators = kSession.getObjects().stream()
-            .filter(o -> o instanceof Separator)
-            .map(o -> (Separator) o)
-            .sorted(Comparator.comparingInt(Separator::getPosition))
-            .collect(Collectors.toList());
+        List<Letter> processedLetters = extractObjects(kSession, Letter.class);
+        List<Separator> separators = extractObjects(kSession, Separator.class);
 
         int separatorCounter = 0;
         for (Letter l : processedLetters) {

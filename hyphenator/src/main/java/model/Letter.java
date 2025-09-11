@@ -1,7 +1,6 @@
 package model;
 
-public class Letter {
-    private int position;
+public class Letter extends Token {
     private char symbol;
     
     private PhoneticTraits traits = new PhoneticTraits(null, 0);
@@ -9,12 +8,8 @@ public class Letter {
     private LetterRole role = LetterRole.NONE;
 
     public Letter(int pos, char value) {
-        this.position = pos;
+        super(pos);
         this.symbol = value;
-    }
-
-    public int getPosition() {
-        return position;
     }
 
     public char getSymbol() {
@@ -35,6 +30,6 @@ public class Letter {
 
     @Override
     public String toString() {
-        return "Letter(symbol: " + symbol + ", pos: " + position + ", type: " + traits.getType() + ", sonority: " + traits.getSonority() + ", role: " + role + ")";
+        return "Letter(symbol: " + symbol + ", pos: " + getPosition() + ", type: " + traits.getType() + ", sonority: " + traits.getSonority() + ", role: " + role + ")";
     }
 }

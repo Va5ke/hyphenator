@@ -1,0 +1,22 @@
+template header
+leftType
+rightType
+
+template "Nasal and plosive"
+
+rule "Two consonants preceded by a nucleus are separated if the first one is @{leftType} and the second one is @{rightType}"
+salience 9
+when
+    $preceding : model.Letter(role == model.LetterRole.NUCLEUS, $pos : position)
+    $other : model.Letter(role == model.LetterRole.NUCLEUS, position > $pos)
+
+    $left : model.Letter(position == $pos + 1)
+    eval($left.getTraits().getType() == model.PhonemeType.@{leftType})
+
+    $right : model.Letter(position == $pos + 2, traits.getType() == model.PhonemeType.@{rightType})
+then
+    insert(new model.Separator($pos + 1));
+    $preceding.setRole(model.LetterRole.PROCESSED);
+    update($preceding);
+end
+end template
