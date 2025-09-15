@@ -68,28 +68,25 @@ public class App {
         }
     }
 
-    private static List<Map<String, Object>> fillSeparatorRows(PhonemeType[] leftTypes, PhonemeType[] rightTypes) {
-        List<Map<String, Object>> separatorData = new ArrayList<>();
-        for (PhonemeType leftType : leftTypes) {
-            for (PhonemeType rightType : rightTypes) {
-                separatorData.add(Map.of(
+    private static List<Map<String, Object>> fillSeparatorSonorantsRows() {
+        List<Map<String, Object>> data = new ArrayList<>();
+        PhonemeType[] types = {PhonemeType.OTHER, PhonemeType.NASAL};
+        for (PhonemeType leftType : types) {
+            for (PhonemeType rightType : types) {
+                data.add(Map.of(
                     "leftType", leftType,
                     "rightType", rightType
                 ));
             }
         }
-        return separatorData;
+        return data;
     }
 
     private static List<Map<String, Object>> fillSeparatorPlosiveNasalRows() {
-        PhonemeType[] leftTypes = {PhonemeType.PLOSIVE, PhonemeType.NASAL};
-        PhonemeType[] rightTypes = {PhonemeType.PLOSIVE, PhonemeType.AFFRICATE, PhonemeType.FRICATIVE, PhonemeType.NASAL};
-        return fillSeparatorRows(leftTypes, rightTypes);
-    }
-
-    private static List<Map<String, Object>> fillSeparatorSonantsRows() {
-        PhonemeType[] types = {PhonemeType.OTHER, PhonemeType.NASAL};
-        return fillSeparatorRows(types, types);
+        List<Map<String, Object>> separatorData = new ArrayList<>();
+        separatorData.add(Map.of("leftType", PhonemeType.NASAL));
+        separatorData.add(Map.of("leftType", PhonemeType.PLOSIVE));
+        return separatorData;
     }
 
     private static String generateRules(ObjectDataCompiler compiler, List<Map<String, Object>> data, String templateName) {
@@ -117,7 +114,7 @@ public class App {
         List<Map<String, Object>> typeData = new ArrayList<>();
         fillPhonemeRows(phonemes, sonorityData, typeData);
 
-        List<Map<String, Object>> separatorSonantsData = fillSeparatorSonantsRows();
+        List<Map<String, Object>> separatorSonorantsData = fillSeparatorSonorantsRows();
         List<Map<String, Object>> separatorPlosiveNasalData = fillSeparatorPlosiveNasalRows();
 
         List<Map<String, Object>> nucleusCandidateData = new ArrayList<>();
@@ -129,7 +126,7 @@ public class App {
         String combinedRules = "";
         combinedRules += generateRules(compiler, sonorityData, "sonority");
         combinedRules += generateRules(compiler, typeData, "type");
-        combinedRules += generateRules(compiler, separatorSonantsData, "separatorSonants");
+        combinedRules += generateRules(compiler, separatorSonorantsData, "separatorSonorants");
         combinedRules += generateRules(compiler, separatorPlosiveNasalData, "separatorPlosiveNasal");
         combinedRules += generateRules(compiler, nucleusCandidateData, "nucleusCandidate");
         

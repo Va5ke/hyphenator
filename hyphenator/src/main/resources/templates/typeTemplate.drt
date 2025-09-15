@@ -5,6 +5,7 @@ type
 template "Classify letter as type"
 
 rule "Classify @{symbol} as @{type}"
+salience 100
 when
     $c : model.Letter(symbol == "@{symbol}")
 then

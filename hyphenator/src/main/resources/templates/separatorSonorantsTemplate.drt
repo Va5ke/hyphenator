@@ -2,23 +2,21 @@ template header
 leftType
 rightType
 
-template "Two sonants"
+template "Two sonorants"
 
-rule "Two sonants of type @{leftType} and @{rightType} preceded by a nucleus are separated if the second one is not J preceded by E"
+rule "Two sonorants of type @{leftType} and @{rightType} preceded by a nucleus are separated if the second one is not J preceded by E"
 salience 9
 when
     $preceding : model.Letter(role == model.LetterRole.NUCLEUS, $pos : position)
     $other : model.Letter(role == model.LetterRole.NUCLEUS, position > $pos)
     
-    $left : model.Letter(position == $pos + 1)
-    eval($left.getTraits().getType() == model.PhonemeType.@{leftType})
+    $left : model.Letter(position == $pos + 1, traits.getType() == model.PhonemeType.@{leftType})
     
-    $middle : model.Letter(position == $pos + 2)
+    $middle : model.Letter(position == $pos + 2, traits.getType() == model.PhonemeType.@{rightType})
     eval($middle.getRole() != model.LetterRole.NUCLEUS && $middle.getRole() != model.LetterRole.PROCESSED)
-    eval($middle.getTraits().getType() == model.PhonemeType.@{rightType})
 
     $right : model.Letter(position == $pos + 3)
-    eval($middle.getSymbol() != 'ј' || $right.getSymbol() != 'е')
+    eval(!($middle.getSymbol() == 'ј' && $right.getSymbol() == 'е'))
 then
     insert(new model.Separator($pos + 1));
     $preceding.setRole(model.LetterRole.PROCESSED);

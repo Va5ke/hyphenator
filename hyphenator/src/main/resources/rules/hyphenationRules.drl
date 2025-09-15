@@ -1,8 +1,20 @@
 rule "A separator cannot be between two vowels"
 when
-    $sep: model.Separator($pos: position)
-    $left: model.Letter(traits.getType() == model.PhonemeType.VOWEL, position == $pos)
-    $right: model.Letter(traits.getType() == model.PhonemeType.VOWEL, position == $pos + 1)
+    $sep: model.Separator(valid == true, $pos: position)
+    $left: model.Letter(traits.type == model.PhonemeType.VOWEL, position == $pos)
+    $right: model.Letter(traits.type == model.PhonemeType.VOWEL, position == $pos + 1)
+then
+    $sep.invalidate();
+end
+
+rule "A separator must have vowels on both sides"
+when
+    $sep : model.Separator(valid == true, $pos : position)
+    (
+        not (Letter(position > $pos, traits.type == model.PhonemeType.VOWEL))
+        or
+        not (Letter(position <= $pos, traits.type == model.PhonemeType.VOWEL))
+    )
 then
     $sep.invalidate();
 end
