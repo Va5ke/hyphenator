@@ -9,36 +9,24 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.drools.template.ObjectDataCompiler;
-import org.kie.api.KieBase;
-import org.kie.api.KieBaseConfiguration;
 import org.kie.api.KieServices;
 import org.kie.api.builder.KieBuilder;
 import org.kie.api.builder.KieFileSystem;
 import org.kie.api.builder.Message;
-import org.kie.api.conf.EventProcessingOption;
 import org.kie.api.runtime.KieContainer;
 import org.kie.api.runtime.KieSession;
-import org.kie.api.runtime.KieSessionConfiguration;
-import org.kie.api.runtime.conf.ClockTypeOption;
 import org.kie.internal.io.ResourceFactory;
 
 import model.Letter;
 import model.PhoneticTraits;
 import model.Separator;
-import model.Text;
 import model.Token;
-import model.events.LineBreakEvent;
-import model.events.SpaceEvent;
-import model.events.SymbolEvent;
 import model.PhonemeType;
 
-public class App {
-
-    private static int L = 5;
+public class Test {
 
     private static final String PHONEMES_PATH = "csv/phonemes.csv";
 
@@ -111,8 +99,12 @@ public class App {
           ResourceFactory.newClassPathResource("rules/" + rulesName + "Rules.drl"));
     }
 
-    private static boolean isLowercaseSerbianCyrillic(char c) {
-        return (c >= '\u0430' && c <= '\u045F');
+    private static <T extends Token> List<T> extractObjects(KieSession kSession, Class<T> c) {
+    return kSession.getObjects().stream()
+        .filter(c::isInstance)
+        .map(c::cast)
+        .sorted(Comparator.comparingInt(Token::getPosition))
+        .collect(Collectors.toList());
     }
     
     public static void main(String[] args) throws Exception {
@@ -146,60 +138,35 @@ public class App {
         writeRules(kfs, "nucleus");
         writeRules(kfs, "separator");
         writeRules(kfs, "hyphenation");
-        writeRules(kfs, "cep");
 
         KieBuilder kb = ks.newKieBuilder(kfs).buildAll();
         if (kb.getResults().hasMessages(Message.Level.ERROR)) {
             throw new RuntimeException(kb.getResults().toString());
         }
-
-        KieBaseConfiguration kbConf = ks.newKieBaseConfiguration();
-        kbConf.setOption(EventProcessingOption.STREAM);
         
         KieContainer kContainer = ks.newKieContainer(kb.getKieModule().getReleaseId());
-        KieBase kbase = kContainer.newKieBase(kbConf);
-        
-        KieSession kSession = kbase.newKieSession();
+        KieSession kSession = kContainer.newKieSession();
 
-        kSession.setGlobal("L", L);
-        Text text = new Text(L);
-        kSession.insert(text);
+        String word = "седамнаестогодишњакиња";
+        for (int i=0; i<word.length(); i++) {
+            Letter l = new Letter(i, word.charAt(i));
+            kSession.insert(l);
+        }
 
-        BufferedReader reader = new BufferedReader(new InputStreamReader(System.in, StandardCharsets.UTF_8));
+        kSession.fireAllRules();
 
-        List<Character> alphabet = List.of(
-            'а', 'б', 'в', 'г', 'д', 'ђ', 'е', 'ж', 'з', 'и', 'ј', 'к', 'л',
-            'љ', 'м', 'н', 'њ', 'о', 'п', 'р', 'с', 'т', 'ћ', 'у', 'ф', 'х',
-            'ц', 'ч', 'џ', 'ш'
-        );
-        String line;
-        while ((line = reader.readLine()) != null) {
-            if (line.equalsIgnoreCase("exit")) break;
-            if (line.isEmpty()) continue;
+        List<Letter> processedLetters = extractObjects(kSession, Letter.class);
+        List<Separator> separators = extractObjects(kSession, Separator.class);
 
-            int num;
-            try {
-                num = Integer.parseInt(line.trim());
-            } catch (NumberFormatException e) {
-                System.out.println("Invalid input: " + line);
-                continue;
-            }
-
-            if (num == 0) {
-                kSession.insert(new SpaceEvent());
-                System.out.println("Inserted SpaceEvent");
-            } else if (num >= 1 && num <= 30) {
-                kSession.insert(new SymbolEvent());
-                System.out.println("Inserted SymbolEvent " + alphabet.get(num - 1));
-            } else {
-                System.out.println("Number out of range (0-30): " + num);
-                continue;
-            }
-
-            kSession.fireAllRules();
+        int separatorCounter = 0;
+        for (Letter l : processedLetters) {
+            System.out.print(l.getSymbol());
+            if (separatorCounter == separators.size() ||
+                separators.get(separatorCounter).getPosition() != l.getPosition()) continue;
+            System.out.print(separators.get(separatorCounter).isValid() ? "|" : ":");
+            separatorCounter++;
         }
 
         kSession.dispose();
-        System.out.println("Session ended.");
     }
 }
