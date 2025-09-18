@@ -4,45 +4,66 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class Text {
-    private int maxRowLength;
-    private List<String> rows;
-    private boolean inCriticalSection = false;
+    private String lines = "";
+    private String criticalWord = "";
+    private String temporaryWord = "";
 
-    public Text(int maxRowLength) {
-        this.maxRowLength = maxRowLength;
-        this.rows = new ArrayList<>();
-        rows.add("");
+    public String getCriticalWord() {
+        return criticalWord;
     }
 
-    public int getMaxRowLength() {
-        return maxRowLength;
+    public void addSymbol(char symbol) {
+        lines += symbol;
     }
 
-    public void setMaxRowLength(int maxRowLength) {
-        this.maxRowLength = maxRowLength;
+    public void addLineBreak() {
+        lines += "\n";
     }
 
-    public boolean isInCriticalSection() {
-        return inCriticalSection;
+    public List<Letter> enterCriticalSection(char symbol) {
+        criticalWord = getLastWord() + symbol;
+        return tokenizeCriticalWord();
     }
 
-    public void setInCriticalSection(boolean inCriticalSection) {
-        this.inCriticalSection = inCriticalSection;
+    public List<Letter> addToCriticalSection(char symbol) {
+        criticalWord += symbol;
+        return tokenizeCriticalWord();
     }
 
-    public void add(char symbol) {
-        rows.set(rows.size() - 1, rows.get(rows.size() - 1) + symbol);
-    }
-
-    public void backspace() {
-        String row = rows.get(rows.size() - 1);
-        if (!row.isEmpty()) {
-            rows.set(rows.size() - 1, row.substring(0, row.length() - 1));
+    private List<Letter> tokenizeCriticalWord() {
+        List<Letter> letters = new ArrayList<>();
+        for (int i = 0; i < criticalWord.length(); i++) {
+            letters.add(new Letter(i, criticalWord.charAt(i)));
         }
+        return letters;
+    }
+
+    public void setTemporaryWord(int pos) {
+        temporaryWord = new StringBuilder(criticalWord)
+        .insert(pos + 1, "-\n")
+        .toString();
+    }
+
+    public int hyphenizePermanently() {
+        lines += temporaryWord;
+        temporaryWord = "";
+        criticalWord = "";
+        //TODO razmak ili enter u zavisnosti od duzine, vrati offset prelomljenog dela
+        return 0;
+    }
+
+    private String getLastWord() {
+        String[] words = lines.split(" ");
+        String lastWord = words[words.length - 1].replace("\n", "");
+
+        int lastIndex = lines.lastIndexOf(" ");
+        lines = lines.substring(0, lastIndex + 1);
+
+        return lastWord;
     }
 
     @Override
     public String toString() {
-        return "Text(" + maxRowLength + ")\n" + String.join("\n", rows);
+        return "Text\n" + lines;
     }
 }

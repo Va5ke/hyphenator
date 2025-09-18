@@ -151,7 +151,7 @@ public class App {
         
         KieSession kSession = kbase.newKieSession();
 
-        Text text = new Text(MAX_ROW_LENGTH);
+        Text text = new Text();
         kSession.insert(text);
 
         BufferedReader reader = new BufferedReader(new InputStreamReader(System.in, StandardCharsets.UTF_8));
@@ -162,7 +162,7 @@ public class App {
             'ц', 'ч', 'џ', 'ш'
         );
         String line;
-        kSession.insert(new LineBreakEvent(1));
+        
         while ((line = reader.readLine()) != null) {
             if (line.equalsIgnoreCase("exit")) break;
             if (line.isEmpty()) continue;

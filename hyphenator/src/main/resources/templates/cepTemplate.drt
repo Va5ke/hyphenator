@@ -5,19 +5,21 @@ template "CEP ruleset for window size ${windowSize}"
 
 rule "SymbolEvent - critical section"
 when
-    $t : model.Text(inCriticalSection == true)
+    $t : model.Text(criticalWord != "")
     $s : model.events.TextEvent(processed == false) over window:length(1)
     eval($s instanceof model.events.SymbolEvent)
 then
     $s.setProcessed(true);
     update($s);
     System.out.println("SymbolEvent in critical section -> " + $s);
+    java.util.List<model.Letter> letters = $t.addToCriticalSection(((model.events.SymbolEvent) $s).getSymbol());
+    //TODO odredi gde SU crticE preko pravila
 end
 
 rule "SymbolEvent - all symbols/spaces"
 salience 1
 when
-    $t : model.Text(inCriticalSection == false)
+    $t : model.Text(criticalWord == "")
     $s : model.events.TextEvent(processed == false) over window:length(1)
     eval($s instanceof model.events.SymbolEvent)
 
@@ -40,13 +42,14 @@ then
     $s.setProcessed(true);
     update($s);
     System.out.println("SymbolEvent all symbols/spaces -> " + $s);
-    // System.out.println($symbolCount + $spaceCount);
+    java.util.List<model.Letter> letters = $t.enterCriticalSection(((model.events.SymbolEvent) $s).getSymbol());
+    //TODO odredi gde SU crticE preko pravila
 end
 
 rule "SymbolEvent - after last linebreak"
 salience 1
 when
-    $t : model.Text(inCriticalSection == false)
+    $t : model.Text(criticalWord == "")
     $s : model.events.TextEvent(processed == false) over window:length(1)
     eval($s instanceof model.events.SymbolEvent)
 
@@ -74,37 +77,42 @@ then
     $s.setProcessed(true);
     update($s);
     System.out.println("SymbolEvent after last line break -> " + $s);
+    java.util.List<model.Letter> letters = $t.enterCriticalSection(((model.events.SymbolEvent) $s).getSymbol());
+    //TODO odredi gde SU crticE preko pravila
 end
 
 rule "SymbolEvent - else"
 salience 0
 when
-    $t : model.Text(inCriticalSection == false)
+    $t : model.Text(criticalWord == "")
     $s : model.events.TextEvent(processed == false) over window:length(1)
     eval($s instanceof model.events.SymbolEvent)
 then
     $s.setProcessed(true);
     update($s);
     System.out.println("SymbolEvent else case -> " + $s);
+    $t.addSymbol(((model.events.SymbolEvent) $s).getSymbol());
 end
 
 
 
 rule "SpaceEvent - critical section"
 when
-    $t : model.Text(inCriticalSection == true)
+    $t : model.Text(criticalWord != "")
     $s : model.events.TextEvent(processed == false) over window:length(1)
     eval($s instanceof model.events.SpaceEvent)
 then
     $s.setProcessed(true);
     update($s);
-    System.out.println("SpaceEvent in critical section -> " + $s);
+    System.out.println("SpaceEvent in critical section");
+    int offset = $t.hyphenizePermanently();
+    insert(new model.events.LineBreak(offset));
 end
 
 rule "SpaceEvent - all symbols/spaces"
 salience 1
 when
-    $t : model.Text(inCriticalSection == false)
+    $t : model.Text(criticalWord == "")
     $s : model.events.TextEvent(processed == false) over window:length(1)
     eval($s instanceof model.events.SpaceEvent)
 
@@ -126,14 +134,15 @@ when
 then
     $s.setProcessed(true);
     update($s);
-    System.out.println("SpaceEvent all symbols/spaces -> " + $s);
-    // System.out.println($symbolCount + $spaceCount);
+    System.out.println("SpaceEvent all symbols/spaces");
+    $t.addLineBreak();
+    insert(new model.events.LineBreakEvent(0));
 end
 
 rule "SpaceEvent - after last line break"
 salience 1
 when
-    $t : model.Text(inCriticalSection == false)
+    $t : model.Text(criticalWord == "")
     $s : model.events.TextEvent(processed == false) over window:length(1)
     eval($s instanceof model.events.SpaceEvent)
 
@@ -160,19 +169,22 @@ when
 then
     $s.setProcessed(true);
     update($s);
-    System.out.println("SpaceEvent after last line break -> " + $s);
+    System.out.println("SpaceEvent after last line break");
+    $t.addLineBreak();
+    insert(new model.events.LineBreakEvent(0));
 end
 
 rule "SpaceEvent - else"
 salience 0
 when
-    $t : model.Text(inCriticalSection == false)
+    $t : model.Text(criticalWord == "")
     $s : model.events.TextEvent(processed == false) over window:length(1)
     eval($s instanceof model.events.SpaceEvent)
 then
     $s.setProcessed(true);
     update($s);
-    System.out.println("SpaceEvent else case -> " + $s);
+    System.out.println("SpaceEvent else case");
+    $t.addSymbol(' ');
 end
 
 end template
