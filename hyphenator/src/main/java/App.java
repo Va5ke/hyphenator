@@ -5,12 +5,9 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 import org.drools.template.ObjectDataCompiler;
 import org.kie.api.KieBase;
@@ -22,15 +19,10 @@ import org.kie.api.builder.Message;
 import org.kie.api.conf.EventProcessingOption;
 import org.kie.api.runtime.KieContainer;
 import org.kie.api.runtime.KieSession;
-import org.kie.api.runtime.KieSessionConfiguration;
-import org.kie.api.runtime.conf.ClockTypeOption;
 import org.kie.internal.io.ResourceFactory;
 
-import model.Letter;
 import model.PhoneticTraits;
-import model.Separator;
 import model.Text;
-import model.Token;
 import model.events.LineBreakEvent;
 import model.events.SpaceEvent;
 import model.events.SymbolEvent;
@@ -38,7 +30,7 @@ import model.PhonemeType;
 
 public class App {
 
-    private static int L = 5;
+    private static int MAX_ROW_LENGTH = 4;
 
     private static final String PHONEMES_PATH = "csv/phonemes.csv";
 
@@ -110,10 +102,6 @@ public class App {
         kfs.write("src/main/resources/rules/" + rulesName + "Rules.drl",
           ResourceFactory.newClassPathResource("rules/" + rulesName + "Rules.drl"));
     }
-
-    private static boolean isLowercaseSerbianCyrillic(char c) {
-        return (c >= '\u0430' && c <= '\u045F');
-    }
     
     public static void main(String[] args) throws Exception {
 
@@ -130,6 +118,8 @@ public class App {
         nucleusCandidateData.add(Map.of("symbol", 'н'));
         nucleusCandidateData.add(Map.of("symbol", 'р'));
 
+        List<Map<String, Object>> cepData = List.of(Map.of("windowSize", MAX_ROW_LENGTH + 1));
+
         ObjectDataCompiler compiler = new ObjectDataCompiler();
         String combinedRules = "";
         combinedRules += generateRules(compiler, sonorityData, "sonority");
@@ -137,6 +127,7 @@ public class App {
         combinedRules += generateRules(compiler, separatorSonorantsData, "separatorSonorants");
         combinedRules += generateRules(compiler, separatorPlosiveNasalData, "separatorPlosiveNasal");
         combinedRules += generateRules(compiler, nucleusCandidateData, "nucleusCandidate");
+        combinedRules += generateRules(compiler, cepData, "cep");
         
         KieServices ks = KieServices.Factory.get();
         KieFileSystem kfs = ks.newKieFileSystem();
@@ -146,7 +137,6 @@ public class App {
         writeRules(kfs, "nucleus");
         writeRules(kfs, "separator");
         writeRules(kfs, "hyphenation");
-        writeRules(kfs, "cep");
 
         KieBuilder kb = ks.newKieBuilder(kfs).buildAll();
         if (kb.getResults().hasMessages(Message.Level.ERROR)) {
@@ -161,8 +151,7 @@ public class App {
         
         KieSession kSession = kbase.newKieSession();
 
-        kSession.setGlobal("L", L);
-        Text text = new Text(L);
+        Text text = new Text(MAX_ROW_LENGTH);
         kSession.insert(text);
 
         BufferedReader reader = new BufferedReader(new InputStreamReader(System.in, StandardCharsets.UTF_8));
@@ -173,6 +162,7 @@ public class App {
             'ц', 'ч', 'џ', 'ш'
         );
         String line;
+        kSession.insert(new LineBreakEvent(1));
         while ((line = reader.readLine()) != null) {
             if (line.equalsIgnoreCase("exit")) break;
             if (line.isEmpty()) continue;
@@ -181,7 +171,6 @@ public class App {
             try {
                 num = Integer.parseInt(line.trim());
             } catch (NumberFormatException e) {
-                System.out.println("Invalid input: " + line);
                 continue;
             }
 
@@ -189,15 +178,20 @@ public class App {
                 kSession.insert(new SpaceEvent());
                 System.out.println("Inserted SpaceEvent");
             } else if (num >= 1 && num <= 30) {
-                kSession.insert(new SymbolEvent());
-                System.out.println("Inserted SymbolEvent " + alphabet.get(num - 1));
+                char c = alphabet.get(num - 1);
+                kSession.insert(new SymbolEvent(c));
+                System.out.println("Inserted SymbolEvent " + c);
             } else {
-                System.out.println("Number out of range (0-30): " + num);
                 continue;
             }
 
             kSession.fireAllRules();
         }
+
+        System.out.println(kSession.getObjects().stream()
+            .filter(t -> t instanceof Text)
+            .findFirst().get()
+        );
 
         kSession.dispose();
         System.out.println("Session ended.");

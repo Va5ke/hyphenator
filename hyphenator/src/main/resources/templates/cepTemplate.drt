@@ -1,0 +1,178 @@
+template header
+windowSize
+
+template "CEP ruleset for window size ${windowSize}"
+
+rule "SymbolEvent - critical section"
+when
+    $t : model.Text(inCriticalSection == true)
+    $s : model.events.TextEvent(processed == false) over window:length(1)
+    eval($s instanceof model.events.SymbolEvent)
+then
+    $s.setProcessed(true);
+    update($s);
+    System.out.println("SymbolEvent in critical section -> " + $s);
+end
+
+rule "SymbolEvent - all symbols/spaces"
+salience 1
+when
+    $t : model.Text(inCriticalSection == false)
+    $s : model.events.TextEvent(processed == false) over window:length(1)
+    eval($s instanceof model.events.SymbolEvent)
+
+    $recent : java.util.List() from collect(
+        model.events.TextEvent() over window:length(@{windowSize})
+    )
+
+    $symbolCount : Number() from accumulate(
+        model.events.SymbolEvent() from $recent,
+        count()
+    )
+
+    $spaceCount : Number() from accumulate(
+        model.events.SpaceEvent() from $recent,
+        count()
+    )
+
+    eval( $symbolCount.intValue() + $spaceCount.intValue() == @{windowSize} )
+then
+    $s.setProcessed(true);
+    update($s);
+    System.out.println("SymbolEvent all symbols/spaces -> " + $s);
+    // System.out.println($symbolCount + $spaceCount);
+end
+
+rule "SymbolEvent - after last linebreak"
+salience 1
+when
+    $t : model.Text(inCriticalSection == false)
+    $s : model.events.TextEvent(processed == false) over window:length(1)
+    eval($s instanceof model.events.SymbolEvent)
+
+    $recent : java.util.List() from collect(
+        model.events.TextEvent() over window:length(@{windowSize})
+    )
+    
+    $linebreaks : java.util.List() from collect(
+        model.events.LineBreakEvent() from $recent
+    )
+
+    $lb : model.events.LineBreakEvent($offset : offset) from $linebreaks
+    not model.events.LineBreakEvent(this after $lb) from $linebreaks
+
+    $symbolCount : Number() from accumulate(
+            model.events.SymbolEvent(this after $lb) from $recent,
+            count()
+        )
+    $spaceCount : Number() from accumulate(
+            model.events.SpaceEvent(this after $lb) from $recent,
+            count()
+        )
+    eval( $symbolCount.intValue() + $spaceCount.intValue() + $offset == @{windowSize} )
+then
+    $s.setProcessed(true);
+    update($s);
+    System.out.println("SymbolEvent after last line break -> " + $s);
+end
+
+rule "SymbolEvent - else"
+salience 0
+when
+    $t : model.Text(inCriticalSection == false)
+    $s : model.events.TextEvent(processed == false) over window:length(1)
+    eval($s instanceof model.events.SymbolEvent)
+then
+    $s.setProcessed(true);
+    update($s);
+    System.out.println("SymbolEvent else case -> " + $s);
+end
+
+
+
+rule "SpaceEvent - critical section"
+when
+    $t : model.Text(inCriticalSection == true)
+    $s : model.events.TextEvent(processed == false) over window:length(1)
+    eval($s instanceof model.events.SpaceEvent)
+then
+    $s.setProcessed(true);
+    update($s);
+    System.out.println("SpaceEvent in critical section -> " + $s);
+end
+
+rule "SpaceEvent - all symbols/spaces"
+salience 1
+when
+    $t : model.Text(inCriticalSection == false)
+    $s : model.events.TextEvent(processed == false) over window:length(1)
+    eval($s instanceof model.events.SpaceEvent)
+
+    $recent : java.util.List() from collect(
+        model.events.TextEvent() over window:length(@{windowSize})
+    )
+
+    $symbolCount : Number() from accumulate(
+        model.events.SymbolEvent() from $recent,
+        count()
+    )
+
+    $spaceCount : Number() from accumulate(
+        model.events.SpaceEvent() from $recent,
+        count()
+    )
+
+    eval( $symbolCount.intValue() + $spaceCount.intValue() == @{windowSize} )
+then
+    $s.setProcessed(true);
+    update($s);
+    System.out.println("SpaceEvent all symbols/spaces -> " + $s);
+    // System.out.println($symbolCount + $spaceCount);
+end
+
+rule "SpaceEvent - after last line break"
+salience 1
+when
+    $t : model.Text(inCriticalSection == false)
+    $s : model.events.TextEvent(processed == false) over window:length(1)
+    eval($s instanceof model.events.SpaceEvent)
+
+    $recent : java.util.List() from collect(
+        model.events.TextEvent() over window:length(@{windowSize})
+    )
+    
+    $linebreaks : java.util.List() from collect(
+        model.events.LineBreakEvent() from $recent
+    )
+
+    $lb : model.events.LineBreakEvent($offset : offset) from $linebreaks
+    not model.events.LineBreakEvent(this after $lb) from $linebreaks
+
+    $symbolCount : Number() from accumulate(
+            model.events.SymbolEvent(this after $lb) from $recent,
+            count()
+        )
+    $spaceCount : Number() from accumulate(
+            model.events.SpaceEvent(this after $lb) from $recent,
+            count()
+        )
+    eval( $symbolCount.intValue() + $spaceCount.intValue() + $offset == @{windowSize} )
+then
+    $s.setProcessed(true);
+    update($s);
+    System.out.println("SpaceEvent after last line break -> " + $s);
+end
+
+rule "SpaceEvent - else"
+salience 0
+when
+    $t : model.Text(inCriticalSection == false)
+    $s : model.events.TextEvent(processed == false) over window:length(1)
+    eval($s instanceof model.events.SpaceEvent)
+then
+    $s.setProcessed(true);
+    update($s);
+    System.out.println("SpaceEvent else case -> " + $s);
+end
+
+end template

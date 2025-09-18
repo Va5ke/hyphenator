@@ -1,9 +1,16 @@
 package model.events;
-import org.kie.api.definition.type.Role;
-import static org.kie.api.definition.type.Role.Type;
 
-@Role(Type.EVENT)
-public class SymbolEvent {
+public class SymbolEvent extends TextEvent {
+    private char symbol;
+
+    public SymbolEvent(char symbol) {
+        this.symbol = symbol;
+    }
+
+    public char getSymbol() {
+        return symbol;
+    }
+
     @Override
     public String toString() {
         return "SymbolEvent";

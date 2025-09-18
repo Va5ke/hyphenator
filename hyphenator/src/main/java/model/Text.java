@@ -6,7 +6,7 @@ import java.util.List;
 public class Text {
     private int maxRowLength;
     private List<String> rows;
-    private boolean inCriticalSection = true;
+    private boolean inCriticalSection = false;
 
     public Text(int maxRowLength) {
         this.maxRowLength = maxRowLength;
@@ -39,5 +39,10 @@ public class Text {
         if (!row.isEmpty()) {
             rows.set(rows.size() - 1, row.substring(0, row.length() - 1));
         }
+    }
+
+    @Override
+    public String toString() {
+        return "Text(" + maxRowLength + ")\n" + String.join("\n", rows);
     }
 }

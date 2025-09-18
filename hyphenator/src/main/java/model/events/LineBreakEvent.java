@@ -1,9 +1,6 @@
 package model.events;
-import org.kie.api.definition.type.Role;
-import static org.kie.api.definition.type.Role.Type;
 
-@Role(Type.EVENT)
-public class LineBreakEvent {
+public class LineBreakEvent extends TextEvent {
     private int offset;
 
     public LineBreakEvent(int offset) {
