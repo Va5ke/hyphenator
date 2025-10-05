@@ -21,6 +21,7 @@ import org.kie.api.builder.Message;
 import org.kie.api.conf.EventProcessingOption;
 import org.kie.api.runtime.KieContainer;
 import org.kie.api.runtime.KieSession;
+import org.kie.api.runtime.rule.FactHandle;
 import org.kie.internal.io.ResourceFactory;
 import org.springframework.stereotype.Service;
 
@@ -185,8 +186,26 @@ public class TextService {
         return text.toString();
     }
 
+    public void resetText() {
+        List<FactHandle> handles = new ArrayList<>();
+        for (Object obj : kSession.getObjects()) {
+            FactHandle handle = kSession.getFactHandle(obj);
+            if (handle != null) {
+                handles.add(handle);
+            }
+        }
+
+        for (FactHandle handle : handles) {
+            kSession.delete(handle);
+        }
+
+        text = new Text();
+        kSession.insert(text);
+    }
+
     @PreDestroy
     public void destroy() {
+        System.out.println("Disposing kie session...");
         if (kSession != null) kSession.dispose();
     }
 }

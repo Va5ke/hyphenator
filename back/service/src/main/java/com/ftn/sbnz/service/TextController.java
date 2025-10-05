@@ -22,4 +22,10 @@ public class TextController {
         String updatedText = textService.processEvent(request.getNumber());
         return ResponseEntity.ok(updatedText);
     }
+
+    @PostMapping("/reset")
+    public ResponseEntity<String> resetText() {
+        textService.resetText();
+        return ResponseEntity.ok("Text reset successfully");
+    }
 }
