@@ -1,0 +1,11 @@
+rule "Default case for separating syllables"
+salience 8
+when
+    $preceding : com.ftn.sbnz.model.models.Letter(role == com.ftn.sbnz.model.models.LetterRole.NUCLEUS, $pos: position)
+    $other : com.ftn.sbnz.model.models.Letter(position > $pos)
+    eval($other.getRole() == com.ftn.sbnz.model.models.LetterRole.NUCLEUS)
+then
+    insert(new com.ftn.sbnz.model.models.Separator($pos));
+    $preceding.setRole(com.ftn.sbnz.model.models.LetterRole.PROCESSED);
+    update($preceding);
+end
