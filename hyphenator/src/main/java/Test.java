@@ -5,31 +5,28 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.drools.template.ObjectDataCompiler;
-import org.kie.api.KieBase;
-import org.kie.api.KieBaseConfiguration;
 import org.kie.api.KieServices;
 import org.kie.api.builder.KieBuilder;
 import org.kie.api.builder.KieFileSystem;
 import org.kie.api.builder.Message;
-import org.kie.api.conf.EventProcessingOption;
 import org.kie.api.runtime.KieContainer;
 import org.kie.api.runtime.KieSession;
 import org.kie.internal.io.ResourceFactory;
 
+import model.Letter;
 import model.PhoneticTraits;
-import model.Text;
-import model.events.SpaceEvent;
-import model.events.SymbolEvent;
+import model.Separator;
+import model.Token;
 import model.PhonemeType;
 
-public class App {
-
-    private static int MAX_ROW_LENGTH = 9;
+public class Test {
 
     private static final String PHONEMES_PATH = "csv/phonemes.csv";
 
@@ -101,6 +98,14 @@ public class App {
         kfs.write("src/main/resources/rules/" + rulesName + "Rules.drl",
           ResourceFactory.newClassPathResource("rules/" + rulesName + "Rules.drl"));
     }
+
+    private static <T extends Token> List<T> extractObjects(KieSession kSession, Class<T> c) {
+    return kSession.getObjects().stream()
+        .filter(c::isInstance)
+        .map(c::cast)
+        .sorted(Comparator.comparingInt(Token::getPosition))
+        .collect(Collectors.toList());
+    }
     
     public static void main(String[] args) throws Exception {
 
@@ -117,24 +122,13 @@ public class App {
         nucleusCandidateData.add(Map.of("symbol", 'н'));
         nucleusCandidateData.add(Map.of("symbol", 'р'));
 
-        int windowSize = MAX_ROW_LENGTH + 1;
-
-        List<Map<String, Object>> cepData = List.of(Map.of("windowSize", windowSize));
-
         ObjectDataCompiler compiler = new ObjectDataCompiler();
-        String combinedRules =
-                    "declare window TextEvents\n" +
-                    "    model.events.TextEvent() over window:length(" + windowSize + ")\n" +
-                    "end\n\n" +
-                    "declare window Recent\n" +
-                    "    model.events.TextEvent() over window:length(1)\n" +
-                    "end\n\n";
+        String combinedRules = "";
         combinedRules += generateRules(compiler, sonorityData, "sonority");
         combinedRules += generateRules(compiler, typeData, "type");
         combinedRules += generateRules(compiler, separatorSonorantsData, "separatorSonorants");
         combinedRules += generateRules(compiler, separatorPlosiveNasalData, "separatorPlosiveNasal");
         combinedRules += generateRules(compiler, nucleusCandidateData, "nucleusCandidate");
-        combinedRules += generateRules(compiler, cepData, "hyphenation");
         
         KieServices ks = KieServices.Factory.get();
         KieFileSystem kfs = ks.newKieFileSystem();
@@ -149,58 +143,30 @@ public class App {
         if (kb.getResults().hasMessages(Message.Level.ERROR)) {
             throw new RuntimeException(kb.getResults().toString());
         }
-
-        KieBaseConfiguration kbConf = ks.newKieBaseConfiguration();
-        kbConf.setOption(EventProcessingOption.STREAM);
         
         KieContainer kContainer = ks.newKieContainer(kb.getKieModule().getReleaseId());
-        KieBase kbase = kContainer.newKieBase(kbConf);
-        
-        KieSession kSession = kbase.newKieSession();
+        KieSession kSession = kContainer.newKieSession();
 
-        Text text = new Text();
-        kSession.insert(text);
-
-        BufferedReader reader = new BufferedReader(new InputStreamReader(System.in, StandardCharsets.UTF_8));
-
-        List<Character> alphabet = List.of(
-            'а', 'б', 'в', 'г', 'д', 'ђ', 'е', 'ж', 'з', 'и', 'ј', 'к', 'л',
-            'љ', 'м', 'н', 'њ', 'о', 'п', 'р', 'с', 'т', 'ћ', 'у', 'ф', 'х',
-            'ц', 'ч', 'џ', 'ш'
-        );
-        String line;
-        
-        while ((line = reader.readLine()) != null) {
-            if (line.equalsIgnoreCase("exit")) break;
-            if (line.isEmpty()) continue;
-
-            int num;
-            try {
-                num = Integer.parseInt(line.trim());
-            } catch (NumberFormatException e) {
-                continue;
-            }
-
-            if (num == 0) {
-                kSession.insert(new SpaceEvent());
-                System.out.println("Inserted SpaceEvent");
-            } else if (num >= 1 && num <= 30) {
-                char c = alphabet.get(num - 1);
-                kSession.insert(new SymbolEvent(c));
-                System.out.println("Inserted SymbolEvent " + c);
-            } else {
-                continue;
-            }
-
-            kSession.fireAllRules();
+        String word = "седамнаестогодишњакиња";
+        for (int i=0; i<word.length(); i++) {
+            Letter l = new Letter(i, word.charAt(i));
+            kSession.insert(l);
         }
 
-        System.out.println(kSession.getObjects().stream()
-            .filter(t -> t instanceof Text)
-            .findFirst().get()
-        );
+        kSession.fireAllRules();
+
+        List<Letter> processedLetters = extractObjects(kSession, Letter.class);
+        List<Separator> separators = extractObjects(kSession, Separator.class);
+
+        int separatorCounter = 0;
+        for (Letter l : processedLetters) {
+            System.out.print(l.getSymbol());
+            if (separatorCounter == separators.size() ||
+                separators.get(separatorCounter).getPosition() != l.getPosition()) continue;
+            System.out.print(separators.get(separatorCounter).isValid() ? "|" : ":");
+            separatorCounter++;
+        }
 
         kSession.dispose();
-        System.out.println("Session ended.");
     }
 }
