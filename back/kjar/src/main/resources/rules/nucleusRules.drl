@@ -1,0 +1,48 @@
+rule "Vowel is a nucleus"
+when
+    $c : com.ftn.sbnz.model.models.Letter(traits.type == com.ftn.sbnz.model.models.PhonemeType.VOWEL)
+then
+    $c.setRole(com.ftn.sbnz.model.models.LetterRole.NUCLEUS);
+    update($c);
+end
+
+rule "Nucleus candidate between two phonemes of lower sonority is a nucleus"
+salience 10
+when
+    $middle : com.ftn.sbnz.model.models.Letter(role == com.ftn.sbnz.model.models.LetterRole.NUCLEUS_CANDIDATE, $mPos: position, $mSon : traits.sonority)
+
+    $left : com.ftn.sbnz.model.models.Letter(position == $mPos - 1, $lSon : traits.sonority)
+
+    $right : com.ftn.sbnz.model.models.Letter(position == $mPos + 1, traits.sonority < $mSon)
+
+    eval ($lSon < $mSon)
+then
+    $middle.setRole(com.ftn.sbnz.model.models.LetterRole.NUCLEUS);
+    update($middle);
+end
+
+rule "Nucleus candidate at the start of the word followed by a phoneme of lower sonority is a nucleus"
+salience 10
+when
+    $left : com.ftn.sbnz.model.models.Letter(role == com.ftn.sbnz.model.models.LetterRole.NUCLEUS_CANDIDATE, $lPos: position, $lSon : traits.sonority)
+
+    not(com.ftn.sbnz.model.models.Letter(position < $lPos))
+
+    $right : com.ftn.sbnz.model.models.Letter(position == $lPos + 1, traits.sonority < $lSon)
+then
+    $left.setRole(com.ftn.sbnz.model.models.LetterRole.NUCLEUS);
+    update($left);
+end
+
+rule "Nucleus candidate at the end of the word preceded by a phoneme of lower sonority is a nucleus"
+salience 10
+when
+    $right : com.ftn.sbnz.model.models.Letter(role == com.ftn.sbnz.model.models.LetterRole.NUCLEUS_CANDIDATE, $rPos: position, $rSon: traits.sonority)
+
+    not(com.ftn.sbnz.model.models.Letter(position > $rPos))
+
+    $left : com.ftn.sbnz.model.models.Letter(position == $rPos - 1, traits.sonority < $rSon)
+then
+    $right.setRole(com.ftn.sbnz.model.models.LetterRole.NUCLEUS);
+    update($right);
+end

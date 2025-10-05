@@ -1,0 +1,25 @@
+template header
+leftType
+rightType
+
+template "Two sonorants"
+
+rule "Two sonorants of type @{leftType} and @{rightType} preceded by a nucleus are separated if the second one is not J preceded by E"
+salience 9
+when
+    $preceding : com.ftn.sbnz.model.models.Letter(role == com.ftn.sbnz.model.models.LetterRole.NUCLEUS, $pos : position)
+    $other : com.ftn.sbnz.model.models.Letter(role == com.ftn.sbnz.model.models.LetterRole.NUCLEUS, position > $pos)
+    
+    $left : com.ftn.sbnz.model.models.Letter(position == $pos + 1, traits.getType() == com.ftn.sbnz.model.models.PhonemeType.@{leftType})
+    
+    $middle : com.ftn.sbnz.model.models.Letter(position == $pos + 2, traits.getType() == com.ftn.sbnz.model.models.PhonemeType.@{rightType})
+    eval($middle.getRole() != com.ftn.sbnz.model.models.LetterRole.NUCLEUS && $middle.getRole() != com.ftn.sbnz.model.models.LetterRole.PROCESSED)
+
+    $right : com.ftn.sbnz.model.models.Letter(position == $pos + 3)
+    eval(!($middle.getSymbol() == 'ј' && $right.getSymbol() == 'е'))
+then
+    insert(new com.ftn.sbnz.model.models.Separator($pos + 1));
+    $preceding.setRole(com.ftn.sbnz.model.models.LetterRole.PROCESSED);
+    update($preceding);
+end
+end template

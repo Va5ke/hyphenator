@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Serbian Cyrillic Input</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; text-align: center; }
+        #textBox { width: 50%; height: 200px; font-size: 24px; margin-bottom: 20px; }
+        .button-row { display: flex; justify-content: center; gap: 5px; margin-bottom: 5px; }
+        button { padding: 10px 15px; font-size: 18px; cursor: pointer; }
+        #spaceBtn { padding: 10px 30px; font-size: 18px; margin-top: 10px; }
+        #resetBtn { background-color: #f44336; color: white; padding: 10px 20px; font-size: 18px; margin-top: 20px; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+    <div class="text-container">
+        <textarea id="textBox" readonly></textarea>
+    </div>
+
+    <div id="letterContainer"></div>
+
+    <button id="spaceBtn">Space</button>
+    <br>
+    <button id="resetBtn">Reset</button>
+
+    <script>
+        const letters = [
+            'а','б','в','г','д','ђ','е','ж','з','и','ј','к','л',
+            'љ','м','н','њ','о','п','р','с','т','ћ','у','ф','х',
+            'ц','ч','џ','ш'
+        ];
+
+        const container = document.getElementById('letterContainer');
+        const textBox = document.getElementById('textBox');
+
+        const buttonsPerRow = Math.ceil(letters.length / 3);
+
+        for (let i = 0; i < 3; i++) {
+            const row = document.createElement('div');
+            row.className = 'button-row';
+            const start = i * buttonsPerRow;
+            const end = Math.min(start + buttonsPerRow, letters.length);
+            for (let j = start; j < end; j++) {
+                const btn = document.createElement('button');
+                btn.textContent = letters[j];
+                btn.addEventListener('click', () => sendEvent(j + 1));
+                row.appendChild(btn);
+            }
+            container.appendChild(row);
+        }
+
+        // Space button
+        document.getElementById('spaceBtn').addEventListener('click', () => sendEvent(0));
+
+        // Reset text
+        document.getElementById('resetBtn').addEventListener('click', async () => {
+            try {
+                const response = await fetch('http://localhost:8080/api/text/reset', { method: 'POST' });
+                if (response.ok) {
+                    textBox.value = '';
+                } else {
+                    console.error('Failed to reset text');
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        });
+
+        // Send event to backend
+        async function sendEvent(number) {
+            try {
+                const response = await fetch('http://localhost:8080/api/text/event', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ number })
+                });
+                if (response.ok) {
+                    const updatedText = await response.text();
+                    textBox.value = updatedText;
+                } else {
+                    console.error('Failed to send event');
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        }
+    </script>
+
+</body>
+</html>
