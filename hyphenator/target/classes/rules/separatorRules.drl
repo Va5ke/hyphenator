@@ -1,0 +1,11 @@
+rule "Default case for separating syllables"
+salience 8
+when
+    $preceding : model.Letter(role == model.LetterRole.NUCLEUS, $pos: position)
+    $other : model.Letter(position > $pos)
+    eval($other.getRole() == model.LetterRole.NUCLEUS)
+then
+    insert(new model.Separator($pos));
+    $preceding.setRole(model.LetterRole.PROCESSED);
+    update($preceding);
+end

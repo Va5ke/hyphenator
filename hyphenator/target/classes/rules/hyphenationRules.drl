@@ -1,0 +1,111 @@
+rule "A separator cannot be between two vowels"
+salience 7
+when
+    $sep: model.Separator(valid == true, $pos: position)
+    $left: model.Letter(traits.type == model.PhonemeType.VOWEL, position == $pos)
+    $right: model.Letter(traits.type == model.PhonemeType.VOWEL, position == $pos + 1)
+then
+    $sep.invalidate();
+    update($sep);
+end
+
+rule "A separator must have vowels on both sides"
+salience 7
+when
+    $sep : model.Separator(valid == true, $pos : position)
+    (
+        not (Letter(position > $pos, traits.type == model.PhonemeType.VOWEL))
+        or
+        not (Letter(position <= $pos, traits.type == model.PhonemeType.VOWEL))
+    )
+then
+    $sep.invalidate();
+    update($sep);
+end
+
+rule "A separator must have more than one letter to the right"
+salience 7
+when 
+    $sep : model.Separator(valid == true, $pos: position)
+    
+    $count : Number(intValue == 1) from accumulate(
+        Letter(position > $pos),
+        count()
+    ) 
+then
+    $sep.invalidate();
+    update($sep);
+end
+
+rule "The right-most separator with at most len letters before it is chosen for the hyphen"
+salience 6
+when
+    $s : model.SeparatorGenerationComplete()
+    $t : model.Text()
+    $l : Integer()
+    $sep : model.Separator( !chosen, $pos : position )
+    $count : Number( intValue <= $l ) from accumulate(
+        $letter : model.Letter( position <= $pos ),
+        count($letter)
+    )
+    not(model.Separator( position > $pos ))
+then
+    delete($s);
+    $sep.choose();
+    $t.setTemporaryWord($sep.getPosition());
+    update($t);
+    $t.print();
+    System.out.println("Chose separator at position " + $sep.getPosition());
+    update($sep);
+end
+
+rule "Mark separators generation complete"
+salience 0
+when
+    $nucleiList : java.util.List() from collect(
+        model.Letter(traits.type == model.PhonemeType.VOWEL)
+    )
+    
+    $sepCount : Number() from accumulate(
+        model.Separator(),
+        count(1)
+    )
+    
+    eval($sepCount.intValue() == $nucleiList.size() - 1)
+then
+    System.out.println("NUCLEI LIST " + $nucleiList.size());
+    for (Object obj : $nucleiList) {
+        model.Letter l = (model.Letter) obj;
+        System.out.println(l);
+    }
+    insert(new model.SeparatorGenerationComplete());
+end
+
+rule "Clear all separators if a separator has been chosen"
+salience 5
+when
+    $chosen : model.Separator(chosen, $pos : position)
+    $otherSep : model.Separator(position != $pos)
+then
+    System.out.println("Cleanup: separator at pos " + $otherSep.getPosition());
+    delete($otherSep);
+end
+
+rule "Clear all letters before chosen separator"
+salience 5
+when
+    $chosen : model.Separator(chosen == true, $pos : position)
+    $letter : model.Letter(position <= $pos)
+then
+    System.out.println("Cleanup: letter at pos " + $letter.getPosition());
+    delete($letter);
+end
+
+rule "Delete chosen separator"
+salience 4
+when
+    $sep : model.Separator(chosen == true)
+then
+    delete($sep);
+    System.out.println("Deleted chosen separator");
+end

@@ -1,0 +1,48 @@
+rule "Vowel is a nucleus"
+when
+    $c : model.Letter(traits.type == model.PhonemeType.VOWEL)
+then
+    $c.setRole(model.LetterRole.NUCLEUS);
+    update($c);
+end
+
+rule "Nucleus candidate between two phonemes of lower sonority is a nucleus"
+salience 10
+when
+    $middle : model.Letter(role == model.LetterRole.NUCLEUS_CANDIDATE, $mPos: position, $mSon : traits.sonority)
+
+    $left : model.Letter(position == $mPos - 1, $lSon : traits.sonority)
+
+    $right : model.Letter(position == $mPos + 1, traits.sonority < $mSon)
+
+    eval ($lSon < $mSon)
+then
+    $middle.setRole(model.LetterRole.NUCLEUS);
+    update($middle);
+end
+
+rule "Nucleus candidate at the start of the word followed by a phoneme of lower sonority is a nucleus"
+salience 10
+when
+    $left : model.Letter(role == model.LetterRole.NUCLEUS_CANDIDATE, $lPos: position, $lSon : traits.sonority)
+
+    not(model.Letter(position < $lPos))
+
+    $right : model.Letter(position == $lPos + 1, traits.sonority < $lSon)
+then
+    $left.setRole(model.LetterRole.NUCLEUS);
+    update($left);
+end
+
+rule "Nucleus candidate at the end of the word preceded by a phoneme of lower sonority is a nucleus"
+salience 10
+when
+    $right : model.Letter(role == model.LetterRole.NUCLEUS_CANDIDATE, $rPos: position, $rSon: traits.sonority)
+
+    not(model.Letter(position > $rPos))
+
+    $left : model.Letter(position == $rPos - 1, traits.sonority < $rSon)
+then
+    $right.setRole(model.LetterRole.NUCLEUS);
+    update($right);
+end

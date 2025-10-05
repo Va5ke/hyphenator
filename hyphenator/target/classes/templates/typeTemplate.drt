@@ -1,0 +1,15 @@
+template header
+symbol
+type
+
+template "Classify letter as type"
+
+rule "Classify @{symbol} as @{type}"
+salience 100
+when
+    $c : model.Letter(symbol == "@{symbol}")
+then
+    $c.getTraits().setType(model.PhonemeType.@{type});
+    update($c);
+end
+end template
