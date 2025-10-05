@@ -21,6 +21,7 @@ public class Text {
     }
 
     public List<Letter> enterCriticalSection(char symbol) {
+        System.out.println(criticalWord);
         criticalWord = getLastWord() + symbol;
         return tokenizeCriticalWord();
     }
@@ -44,12 +45,18 @@ public class Text {
         .toString();
     }
 
-    public int hyphenizePermanently() {
+    public String getRemainingLetters() {
+        int lastDash = temporaryWord.lastIndexOf("-");
+        return (lastDash == -1) ? "" : temporaryWord.substring(lastDash + 1);
+    }
+
+    public int hyphenizePermanently(int maxRowLength) {
+        int offset = getRemainingLetters().length() % maxRowLength;
         lines += temporaryWord;
+        lines += offset == 0 ? "\n" : " ";
         temporaryWord = "";
         criticalWord = "";
-        //TODO razmak ili enter u zavisnosti od duzine, vrati offset prelomljenog dela
-        return 0;
+        return offset;
     }
 
     private String getLastWord() {
@@ -62,8 +69,7 @@ public class Text {
         return lastWord;
     }
 
-    @Override
-    public String toString() {
-        return "Text\n" + lines;
+    public void print() {
+        System.out.println("Text\n" + lines + temporaryWord);
     }
 }

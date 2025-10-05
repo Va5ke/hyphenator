@@ -23,7 +23,6 @@ import org.kie.internal.io.ResourceFactory;
 
 import model.PhoneticTraits;
 import model.Text;
-import model.events.LineBreakEvent;
 import model.events.SpaceEvent;
 import model.events.SymbolEvent;
 import model.PhonemeType;
@@ -118,16 +117,24 @@ public class App {
         nucleusCandidateData.add(Map.of("symbol", 'н'));
         nucleusCandidateData.add(Map.of("symbol", 'р'));
 
-        List<Map<String, Object>> cepData = List.of(Map.of("windowSize", MAX_ROW_LENGTH + 1));
+        int windowSize = MAX_ROW_LENGTH + 1;
+
+        List<Map<String, Object>> cepData = List.of(Map.of("windowSize", windowSize));
 
         ObjectDataCompiler compiler = new ObjectDataCompiler();
-        String combinedRules = "";
+        String combinedRules =
+                    "declare window TextEvents\n" +
+                    "    model.events.TextEvent() over window:length(" + windowSize + ")\n" +
+                    "end\n\n" +
+                    "declare window Recent\n" +
+                    "    model.events.TextEvent() over window:length(1)\n" +
+                    "end\n\n";
         combinedRules += generateRules(compiler, sonorityData, "sonority");
         combinedRules += generateRules(compiler, typeData, "type");
         combinedRules += generateRules(compiler, separatorSonorantsData, "separatorSonorants");
         combinedRules += generateRules(compiler, separatorPlosiveNasalData, "separatorPlosiveNasal");
         combinedRules += generateRules(compiler, nucleusCandidateData, "nucleusCandidate");
-        combinedRules += generateRules(compiler, cepData, "cep");
+        combinedRules += generateRules(compiler, cepData, "hyphenation");
         
         KieServices ks = KieServices.Factory.get();
         KieFileSystem kfs = ks.newKieFileSystem();

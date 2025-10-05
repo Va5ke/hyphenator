@@ -1,7 +1,8 @@
 package model;
 
 public class Separator extends Token{
-    public boolean valid = true;
+    private boolean valid = true;
+    private boolean chosen = false;
 
     public Separator(int position) {
         super(position);
@@ -13,5 +14,13 @@ public class Separator extends Token{
 
     public void invalidate() {
         this.valid = false;
+    }
+
+    public boolean isChosen() {
+        return chosen;
+    }
+
+    public void choose() {
+        this.chosen = true;
     }
 }
