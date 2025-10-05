@@ -40,6 +40,7 @@ end
 rule "The right-most separator with at most len letters before it is chosen for the hyphen"
 salience 6
 when
+    $s : model.SeparatorGenerationComplete()
     $t : model.Text()
     $l : Integer()
     $sep : model.Separator( !chosen, $pos : position )
@@ -49,12 +50,35 @@ when
     )
     not(model.Separator( position > $pos ))
 then
+    delete($s);
     $sep.choose();
     $t.setTemporaryWord($sep.getPosition());
     update($t);
     $t.print();
     System.out.println("Chose separator at position " + $sep.getPosition());
     update($sep);
+end
+
+rule "Mark separators generation complete"
+salience 0
+when
+    $nucleiList : java.util.List() from collect(
+        model.Letter(traits.type == model.PhonemeType.VOWEL)
+    )
+    
+    $sepCount : Number() from accumulate(
+        model.Separator(),
+        count(1)
+    )
+    
+    eval($sepCount.intValue() == $nucleiList.size() - 1)
+then
+    System.out.println("NUCLEI LIST " + $nucleiList.size());
+    for (Object obj : $nucleiList) {
+        model.Letter l = (model.Letter) obj;
+        System.out.println(l);
+    }
+    insert(new model.SeparatorGenerationComplete());
 end
 
 rule "Clear all separators if a separator has been chosen"

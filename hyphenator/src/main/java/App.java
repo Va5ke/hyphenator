@@ -29,7 +29,7 @@ import model.PhonemeType;
 
 public class App {
 
-    private static int MAX_ROW_LENGTH = 4;
+    private static int MAX_ROW_LENGTH = 9;
 
     private static final String PHONEMES_PATH = "csv/phonemes.csv";
 

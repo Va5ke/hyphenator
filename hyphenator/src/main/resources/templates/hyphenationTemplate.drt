@@ -120,7 +120,7 @@ then
     System.out.println("SpaceEvent in critical section");
     int offset = $t.hyphenizePermanently(@{windowSize} - 1);
     update($t);
-    insert(new model.events.LineBreakEvent(offset));
+    insert(new model.events.LineBreakEvent(offset + 1));
     $t.print();
 end
 
