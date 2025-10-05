@@ -72,4 +72,9 @@ public class Text {
     public void print() {
         System.out.println("Text\n" + lines + temporaryWord);
     }
+
+    @Override
+    public String toString() {
+        return lines + temporaryWord;
+    }
 }
